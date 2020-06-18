@@ -11,12 +11,17 @@ from urllib import error
 from bs4 import BeautifulSoup
 
 class Crawler(object):
-    def __init__ (self, fig_type='', fig_num=0):
+    def __init__ (self, fig_type='', fig_num=0, save_path=None):
         self.type = fig_type
-        self.page = fig_num/30+1
+        self.page = fig_num / 30
         # self.route = file_route
+        self.save_path = os.path.join(save_path, str(fig_type))
+
         self.url_list = []
         self.number = len(self.url_list)
+
+        if os.path.exists(self.save_path) is False:
+            os.makedirs(self.save_path)
 
     def run(self):
         """
@@ -116,6 +121,7 @@ class Crawler(object):
         :return:
         """
         num_index = 0
+        print('图片保存路径为:{0}'.format(self.save_path))
         print('当前页面检索到{0}张照片'.format(str(self.number)))
         for pic_source in self.url_list:
             print('正在下载第{0}/{1}张照片，照片源：{2}'.format(str(num_index+1), str(self.number), str(pic_source)))
@@ -124,27 +130,25 @@ class Crawler(object):
                     continue
                 else:
                     pic = requests.get(pic_source, timeout=7)
-            except BaseException:
-                print('未知原因导致当前图片无法下载')
-                continue
-            else:
-                fold_path = os.getcwd() + r'\\' + str(self.type)
-                if os.path.exists(fold_path):
-                    string = fold_path + r'\\'+ self.type+ '_' + str(num_index) + '.jpg'
-                else:
-                    os.mkdir(fold_path)
-                    string = fold_path + r'\\' + self.type + '_' + str(num_index) + '.jpg'
+
+
+                string = os.path.join(self.save_path, str(num_index) + '.jpg')
+
                 fp = open(string, 'wb')
                 fp.write(pic.content)
                 fp.close()
                 num_index += 1
 
+            except BaseException:
+                print('未知原因导致当前图片无法下载')
+                continue
+
 
 if __name__  == "__main__":
+    save_path = os.getcwd()
     # 获取类实例
-    crawler_fig = Crawler('职业资格证书', 300)
+    crawler_fig = Crawler('湖泊', 300, save_path=save_path)
     crawler_fig.run()
 
-    # print(crawler_fig.url_list)
 
 
