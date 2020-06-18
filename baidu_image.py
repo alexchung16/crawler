@@ -6,6 +6,10 @@
 import os
 import re
 import requests
+import hashlib
+import time
+
+import concurrent.futures
 
 from urllib import error
 from bs4 import BeautifulSoup
@@ -28,12 +32,12 @@ class Crawler(object):
         运行方法，更新属性
         :return:
         """
-        self.getURL()
+        self.get_url()
         # self.getSearchURL()
         # self.getFileURL()
-        self.downloadPicture()
+        self.download_picture_threading()
 
-    def getURL(self):
+    def get_url(self):
 
         params = []
         for i in range(30, 30 * int(self.page) + 30, 30):
@@ -79,14 +83,14 @@ class Crawler(object):
                     self.number += 1
 
     # @ property
-    def getSearchURL(self):
+    def get_search_url(self):
         """
         获取搜索url
         :return:
         """
         self.url = r'http://image.baidu.com/search/index?tn=baiduimage&ps=1&lm=-1&cl=2&nc=1&ie=utf-8&word=' + self.type
 
-    def getFileURL(self):
+    def get_file_url(self):
         """
         获取图片文件url
         :return:
@@ -114,41 +118,68 @@ class Crawler(object):
                     self.url_list = pic_url
                     t += 60
 
-
-    def downloadPicture(self):
+    def download_picture(self):
         """
         执行图片下载
         :return:
         """
-        num_index = 0
+
+        # num_index = 0
         print('图片保存路径为:{0}'.format(self.save_path))
         print('当前页面检索到{0}张照片'.format(str(self.number)))
         for pic_source in self.url_list:
-            print('正在下载第{0}/{1}张照片，照片源：{2}'.format(str(num_index+1), str(self.number), str(pic_source)))
+            # print('正在下载第{0}/{1}张照片，照片源：{2}'.format(str(num_index+1), str(self.number), str(pic_source)))
             try:
-                if pic_source is None:
-                    continue
-                else:
-                    pic = requests.get(pic_source, timeout=7)
-
-
-                string = os.path.join(self.save_path, str(num_index) + '.jpg')
-
-                fp = open(string, 'wb')
-                fp.write(pic.content)
-                fp.close()
-                num_index += 1
-
+                self.save_image(pic_source)
             except BaseException:
                 print('未知原因导致当前图片无法下载')
                 continue
+
+    def download_picture_threading(self):
+        """
+        执行图片下载
+        :return:
+        """
+
+        # num_index = 0
+        print('图片保存路径为:{0}'.format(self.save_path))
+        print('当前页面检索到{0}张照片'.format(str(self.number)))
+
+        with concurrent.futures.ThreadPoolExecutor() as execute:
+            execute.map(self.save_image, self.url_list)
+
+
+    def save_image(self, pic_url):
+        """
+        save unique image
+        :param pic_url:
+        :param save_path:
+        :return:
+        """
+        print('正在下载照片源：{0}'.format(str(pic_url)))
+        if pic_url is None:
+            raise KeyError("picture url is None")
+        else:
+            pic = requests.get(pic_url, timeout=7)
+
+        md5 = hashlib.md5()
+        md5.update(pic_url.encode('utf-8'))
+        string = os.path.join(self.save_path, str(md5.hexdigest()) + '.jpg')
+
+        fp = open(string, 'wb')
+        fp.write(pic.content)
+        fp.close()
 
 
 if __name__  == "__main__":
     save_path = os.getcwd()
     # 获取类实例
+    start_time = time.perf_counter()
     crawler_fig = Crawler('湖泊', 300, save_path=save_path)
     crawler_fig.run()
+    finish_time = time.perf_counter()
+    print(f"Spend {finish_time-start_time} second")
+
 
 
 
